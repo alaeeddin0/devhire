@@ -3,6 +3,7 @@ package com.example.devhire.controller;
 import com.example.devhire.dto.jobApplication.CreateJobApplicationRequest;
 import com.example.devhire.dto.jobApplication.JobApplicationResponse;
 import com.example.devhire.dto.jobApplication.UpdateApplicationStatusRequest;
+import com.example.devhire.dto.jobApplication.UpdateJobApplicationRequest;
 import com.example.devhire.service.JobApplicationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,36 @@ public class JobApplicationController {
                 return ResponseEntity.ok(
                                 jobApplicationService.getApplicationsByRecruiter(
                                                 recruiterProfileId));
+        }
+
+        @GetMapping("/{id}")
+        public ResponseEntity<JobApplicationResponse> getApplicationById(
+                        @PathVariable Long id) {
+                return ResponseEntity.ok(
+                                jobApplicationService.getApplicationById(id));
+        }
+
+        @PutMapping("/{id}")
+        public ResponseEntity<JobApplicationResponse> updateApplication(
+                        @PathVariable Long id,
+                        @RequestParam Long candidateProfileId,
+                        @Valid @RequestBody UpdateJobApplicationRequest request) {
+                return ResponseEntity.ok(
+                                jobApplicationService.updateApplication(
+                                                id,
+                                                candidateProfileId,
+                                                request));
+        }
+
+        @DeleteMapping("/{id}")
+        public ResponseEntity<Void> deleteApplication(
+                        @PathVariable Long id,
+                        @RequestParam Long candidateProfileId) {
+                jobApplicationService.deleteApplication(
+                                id,
+                                candidateProfileId);
+
+                return ResponseEntity.noContent().build();
         }
 
         @PostMapping

@@ -16,9 +16,8 @@ import com.example.devhire.repo.JobOfferRepository;
 import com.example.devhire.repo.RecruiterProfileRepository;
 import com.example.devhire.repo.ResumeRepository;
 import lombok.RequiredArgsConstructor;
-
+import com.example.devhire.dto.jobApplication.UpdateJobApplicationRequest;
 import java.util.List;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,6 +55,17 @@ public class JobApplicationService {
                                 .map(this::toResponse)
                                 .toList();
         }
+        
+        public JobApplicationResponse getApplicationById(Long id) {
+                return toResponse(getApplicationEntityById(id));
+        }
+        
+        private JobApplication getApplicationEntityById(Long id) {
+                return jobApplicationRepository.findById(id)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Candidature introuvable avec l'id : " + id));
+        }
+
 
         @Transactional
         public JobApplicationResponse createApplication(
@@ -95,6 +105,57 @@ public class JobApplicationService {
                 application.setResume(resume);
 
                 return toResponse(jobApplicationRepository.save(application));
+        }
+
+        @Transactional
+        public JobApplicationResponse updateApplication(
+                        Long applicationId,
+                        Long candidateProfileId,
+                        UpdateJobApplicationRequest request) {
+                JobApplication application = getApplicationEntityById(applicationId);
+
+                if (!application.getCandidate().getId().equals(candidateProfileId)) {
+                        throw new IllegalArgumentException(
+                                        "Ce candidat ne peut pas modifier cette candidature.");
+                }
+
+                if (application.getStatus() != ApplicationStatus.PENDING) {
+                        throw new IllegalArgumentException(
+                                        "Seule une candidature au statut PENDING peut être modifiée.");
+                }
+
+                Resume resume = resumeRepository.findById(request.resumeId())
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "CV introuvable avec l'id : " + request.resumeId()));
+
+                if (!resume.getCandidate().getId().equals(candidateProfileId)) {
+                        throw new IllegalArgumentException(
+                                        "Ce CV n'appartient pas à ce candidat.");
+                }
+
+                application.setResume(resume);
+                application.setCoverLetter(request.coverLetter());
+
+                return toResponse(jobApplicationRepository.save(application));
+        }
+        
+        @Transactional
+        public void deleteApplication(
+                        Long applicationId,
+                        Long candidateProfileId) {
+                JobApplication application = getApplicationEntityById(applicationId);
+
+                if (!application.getCandidate().getId().equals(candidateProfileId)) {
+                        throw new IllegalArgumentException(
+                                        "Ce candidat ne peut pas supprimer cette candidature.");
+                }
+
+                if (application.getStatus() != ApplicationStatus.PENDING) {
+                        throw new IllegalArgumentException(
+                                        "Seule une candidature au statut PENDING peut être supprimée.");
+                }
+
+                jobApplicationRepository.delete(application);
         }
 
         @Transactional
