@@ -1,4 +1,4 @@
-package com.example.devhire.dto;
+package com.example.devhire.dto.resume;
 
 import java.time.LocalDateTime;
 
