@@ -20,6 +20,7 @@ import com.example.devhire.dto.jobApplication.UpdateJobApplicationRequest;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.access.AccessDeniedException;
 
 @Service
 @RequiredArgsConstructor
@@ -31,33 +32,28 @@ public class JobApplicationService {
         private final ResumeRepository resumeRepository;
         private final RecruiterProfileRepository recruiterProfileRepository;
 
-        public List<JobApplicationResponse> getApplicationsByCandidate(
-                        Long candidateProfileId) {
-                if (!candidateProfileRepository.existsById(candidateProfileId)) {
-                        throw new ResourceNotFoundException(
-                                        "Profil candidat introuvable avec l'id : "
-                                                        + candidateProfileId);
-                }
-
-                return jobApplicationRepository
-                                .findAllByCandidateIdOrderByAppliedAtDesc(candidateProfileId)
-                                .stream()
-                                .map(this::toResponse)
-                                .toList();
-        }
-
-        public List<JobApplicationResponse> getApplicationsByRecruiter(
-                        Long recruiterProfileId) {
-                return jobApplicationRepository
-                                .findAllByJobOfferRecruiterIdOrderByAppliedAtDesc(
-                                                recruiterProfileId)
-                                .stream()
-                                .map(this::toResponse)
-                                .toList();
+        private CandidateProfile getCandidateByEmail(String email) {
+                return candidateProfileRepository.findByUserEmail(email)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Profil candidat introuvable."));
         }
         
-        public JobApplicationResponse getApplicationById(Long id) {
-                return toResponse(getApplicationEntityById(id));
+        private RecruiterProfile getRecruiterByEmail(String email) {
+                return recruiterProfileRepository.findByUserEmail(email)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Profil recruteur introuvable."));
+        }
+        
+        public List<JobApplicationResponse> getReceivedApplications(
+                        String email) {
+                RecruiterProfile recruiter = getRecruiterByEmail(email);
+
+                return jobApplicationRepository
+                                .findAllByJobOfferRecruiterIdOrderByAppliedAtDesc(
+                                                recruiter.getId())
+                                .stream()
+                                .map(this::toResponse)
+                                .toList();
         }
         
         private JobApplication getApplicationEntityById(Long id) {
@@ -66,15 +62,48 @@ public class JobApplicationService {
                                                 "Candidature introuvable avec l'id : " + id));
         }
 
+        public List<JobApplicationResponse> getMyApplications(String email) {
+                CandidateProfile candidate = getCandidateByEmail(email);
+
+                return jobApplicationRepository
+                                .findAllByCandidateIdOrderByAppliedAtDesc(candidate.getId())
+                                .stream()
+                                .map(this::toResponse)
+                                .toList();
+        }
+        
+        public JobApplicationResponse getApplicationById(
+                        Long applicationId,
+                        String email) {
+                JobApplication application = getApplicationEntityById(applicationId);
+
+                boolean isCandidateOwner = candidateProfileRepository
+                                .findByUserEmail(email)
+                                .map(candidate -> candidate.getId().equals(
+                                                application.getCandidate().getId()))
+                                .orElse(false);
+
+                boolean isRecruiterOwner = recruiterProfileRepository
+                                .findByUserEmail(email)
+                                .map(recruiter -> recruiter.getId().equals(
+                                                application.getJobOffer()
+                                                                .getRecruiter()
+                                                                .getId()))
+                                .orElse(false);
+
+                if (!isCandidateOwner && !isRecruiterOwner) {
+                        throw new AccessDeniedException(
+                                        "Vous ne pouvez pas consulter cette candidature.");
+                }
+
+                return toResponse(application);
+        }
 
         @Transactional
         public JobApplicationResponse createApplication(
+                        String email,
                         CreateJobApplicationRequest request) {
-                CandidateProfile candidate = candidateProfileRepository
-                                .findById(request.candidateProfileId())
-                                .orElseThrow(() -> new ResourceNotFoundException(
-                                                "Profil candidat introuvable avec l'id : "
-                                                                + request.candidateProfileId()));
+                CandidateProfile candidate = getCandidateByEmail(email);
 
                 JobOffer jobOffer = jobOfferRepository
                                 .findById(request.jobOfferId())
@@ -110,11 +139,13 @@ public class JobApplicationService {
         @Transactional
         public JobApplicationResponse updateApplication(
                         Long applicationId,
-                        Long candidateProfileId,
+                        String email,
                         UpdateJobApplicationRequest request) {
                 JobApplication application = getApplicationEntityById(applicationId);
 
-                if (!application.getCandidate().getId().equals(candidateProfileId)) {
+                CandidateProfile candidate = getCandidateByEmail(email);
+
+                if (!application.getCandidate().getId().equals(candidate.getId())) {
                         throw new IllegalArgumentException(
                                         "Ce candidat ne peut pas modifier cette candidature.");
                 }
@@ -128,7 +159,7 @@ public class JobApplicationService {
                                 .orElseThrow(() -> new ResourceNotFoundException(
                                                 "CV introuvable avec l'id : " + request.resumeId()));
 
-                if (!resume.getCandidate().getId().equals(candidateProfileId)) {
+                if (!resume.getCandidate().getId().equals(candidate.getId())) {
                         throw new IllegalArgumentException(
                                         "Ce CV n'appartient pas à ce candidat.");
                 }
@@ -138,14 +169,16 @@ public class JobApplicationService {
 
                 return toResponse(jobApplicationRepository.save(application));
         }
-        
+
         @Transactional
         public void deleteApplication(
                         Long applicationId,
-                        Long candidateProfileId) {
+                        String email) {
                 JobApplication application = getApplicationEntityById(applicationId);
 
-                if (!application.getCandidate().getId().equals(candidateProfileId)) {
+                CandidateProfile candidate = getCandidateByEmail(email);
+
+                if (!application.getCandidate().getId().equals(candidate.getId())) {
                         throw new IllegalArgumentException(
                                         "Ce candidat ne peut pas supprimer cette candidature.");
                 }
@@ -161,18 +194,14 @@ public class JobApplicationService {
         @Transactional
         public JobApplicationResponse updateStatus(
                         Long applicationId,
-                        Long recruiterProfileId,
+                        String email,
                         UpdateApplicationStatusRequest request) {
                 JobApplication application = jobApplicationRepository
                                 .findById(applicationId)
                                 .orElseThrow(() -> new ResourceNotFoundException(
                                                 "Candidature introuvable avec l'id : " + applicationId));
 
-                RecruiterProfile recruiter = recruiterProfileRepository
-                                .findById(recruiterProfileId)
-                                .orElseThrow(() -> new ResourceNotFoundException(
-                                                "Profil recruteur introuvable avec l'id : "
-                                                                + recruiterProfileId));
+                RecruiterProfile recruiter = getRecruiterByEmail(email);
 
                 Long offerRecruiterId = application.getJobOffer()
                                 .getRecruiter()
@@ -207,7 +236,7 @@ public class JobApplicationService {
                                 application.getCoverLetter(),
                                 application.getAppliedAt());
         }
-        
+
         private boolean isTransitionAllowed(
                         ApplicationStatus currentStatus,
                         ApplicationStatus newStatus) {

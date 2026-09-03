@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -38,19 +39,23 @@ public class UserController {
                 .status(HttpStatus.CREATED)
                 .body(createdUser);
     }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<UserResponse> updateUser(
-            @PathVariable Long id,
+    
+    @PutMapping("/me")
+    public ResponseEntity<UserResponse> updateCurrentUser(
+            Authentication authentication,
             @Valid @RequestBody UpdateUserRequest request) {
         return ResponseEntity.ok(
-                userService.updateUser(id, request));
+                userService.updateCurrentUser(
+                        authentication.getName(),
+                        request));
     }
     
-    @PatchMapping("/{id}/deactivate")
-    public ResponseEntity<UserResponse> deactivateUser(
-            @PathVariable Long id) {
+    
+    @PatchMapping("/me/deactivate")
+    public ResponseEntity<UserResponse> deactivateCurrentUser(
+            Authentication authentication) {
         return ResponseEntity.ok(
-                userService.deactivateUser(id));
+                userService.deactivateCurrentUser(
+                        authentication.getName()));
     }
 }

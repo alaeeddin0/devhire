@@ -9,34 +9,39 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/api/recruiter-profiles")
 @RequiredArgsConstructor
 public class RecruiterProfileController {
 
-    private final RecruiterProfileService recruiterProfileService;
+        private final RecruiterProfileService recruiterProfileService;
 
-    @GetMapping("/{id}")
-    public ResponseEntity<RecruiterProfileResponse> getProfileById(
-            @PathVariable Long id) {
-        return ResponseEntity.ok(
-                recruiterProfileService.getProfileById(id));
-    }
+        @GetMapping("/me")
+        public ResponseEntity<RecruiterProfileResponse> getCurrentProfile(
+                        Authentication authentication) {
+                return ResponseEntity.ok(
+                                recruiterProfileService.getCurrentProfile(
+                                                authentication.getName()));
+        }
 
-    @PostMapping
-    public ResponseEntity<RecruiterProfileResponse> createProfile(
-            @Valid @RequestBody CreateRecruiterProfileRequest request) {
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(recruiterProfileService.createProfile(request));
-    }
+        @PostMapping
+        public ResponseEntity<RecruiterProfileResponse> createProfile(
+                        Authentication authentication,
+                        @Valid @RequestBody CreateRecruiterProfileRequest request) {
+                return ResponseEntity
+                                .status(HttpStatus.CREATED)
+                                .body(recruiterProfileService.createProfile(authentication.getName(), request));
+        }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<RecruiterProfileResponse> updateProfile(
-            @PathVariable Long id,
-            @Valid @RequestBody UpdateRecruiterProfileRequest request) {
-        return ResponseEntity.ok(
-                recruiterProfileService.updateProfile(id, request));
-    }
+        @PutMapping("/me")
+        public ResponseEntity<RecruiterProfileResponse> updateCurrentProfile(
+                        Authentication authentication,
+                        @Valid @RequestBody UpdateRecruiterProfileRequest request) {
+                return ResponseEntity.ok(
+                                recruiterProfileService.updateCurrentProfile(
+                                                authentication.getName(),
+                                                request));
+        }
 }

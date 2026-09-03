@@ -20,27 +20,13 @@ public class RecruiterProfileService {
         private final RecruiterProfileRepository recruiterProfileRepository;
         private final UserRepository userRepository;
 
-        public RecruiterProfileResponse getProfileById(Long id) {
-                return toResponse(getProfileEntityById(id));
-        }
-
-        private RecruiterProfile getProfileEntityById(Long id) {
-                return recruiterProfileRepository.findById(id)
+        public RecruiterProfileResponse getCurrentProfile(String email) {
+                RecruiterProfile profile = recruiterProfileRepository
+                                .findByUserEmail(email)
                                 .orElseThrow(() -> new ResourceNotFoundException(
-                                                "Profil recruteur introuvable avec l'id : " + id));
-        }
+                                                "Profil recruteur introuvable."));
 
-        @Transactional
-        public RecruiterProfileResponse updateProfile(
-                        Long id,
-                        UpdateRecruiterProfileRequest request) {
-                RecruiterProfile profile = getProfileEntityById(id);
-
-                profile.setCompanyName(request.companyName());
-                profile.setCompanyDescription(request.companyDescription());
-                profile.setCompanyWebsite(request.companyWebsite());
-
-                return toResponse(recruiterProfileRepository.save(profile));
+                return toResponse(profile);
         }
 
         private RecruiterProfileResponse toResponse(
@@ -55,10 +41,11 @@ public class RecruiterProfileService {
 
         @Transactional
         public RecruiterProfileResponse createProfile(
+                        String email,
                         CreateRecruiterProfileRequest request) {
-                User user = userRepository.findById(request.userId())
+                User user = userRepository.findByEmail(email)
                                 .orElseThrow(() -> new ResourceNotFoundException(
-                                                "Utilisateur introuvable avec l'id : " + request.userId()));
+                                                "Utilisateur introuvable."));
 
                 if (user.getRole() != UserRole.RECRUITER) {
                         throw new IllegalArgumentException(
@@ -85,4 +72,24 @@ public class RecruiterProfileService {
                                 savedProfile.getCompanyDescription(),
                                 savedProfile.getCompanyWebsite());
         }
+        
+        @Transactional
+        public RecruiterProfileResponse updateCurrentProfile(
+                        String email,
+                        UpdateRecruiterProfileRequest request) {
+                RecruiterProfile profile = getRecruiterByEmail(email);
+
+                profile.setCompanyName(request.companyName());
+                profile.setCompanyDescription(request.companyDescription());
+                profile.setCompanyWebsite(request.companyWebsite());
+
+                return toResponse(recruiterProfileRepository.save(profile));
+        }
+        
+        private RecruiterProfile getRecruiterByEmail(String email) {
+                return recruiterProfileRepository.findByUserEmail(email)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Profil recruteur introuvable."));
+        }
+        
 }

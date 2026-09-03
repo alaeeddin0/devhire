@@ -20,149 +20,149 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JobOfferService {
 
-    private final JobOfferRepository jobOfferRepository;
-    private final RecruiterProfileRepository recruiterProfileRepository;
+        private final JobOfferRepository jobOfferRepository;
+        private final RecruiterProfileRepository recruiterProfileRepository;
 
-    public List<JobOfferResponse> getAllJobOffers() {
-        return jobOfferRepository.findAll()
-                .stream()
-                .map(this::toResponse)
-                .toList();
-    }
-
-    public JobOfferResponse getJobOfferById(Long id) {
-        return toResponse(getJobOfferEntityById(id));
-    }
-
-    @Transactional
-    public JobOfferResponse createJobOffer(
-            JobOffer jobOffer,
-            Long recruiterProfileId) {
-        RecruiterProfile recruiter = recruiterProfileRepository
-                .findById(recruiterProfileId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Recruteur introuvable avec l'id : "
-                                + recruiterProfileId));
-
-        if (recruiter.getUser().getRole() != UserRole.RECRUITER) {
-            throw new IllegalStateException(
-                    "Seul un recruteur peut créer une offre.");
+        private RecruiterProfile getRecruiterByEmail(String email) {
+                return recruiterProfileRepository.findByUserEmail(email)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Profil recruteur introuvable."));
         }
 
-        jobOffer.setId(null);
-        jobOffer.setRecruiter(recruiter);
-
-        return toResponse(jobOfferRepository.save(jobOffer));
-    }
-
-    @Transactional
-    public void deleteJobOffer(
-            Long jobOfferId,
-            Long recruiterProfileId) {
-        JobOffer jobOffer = getJobOfferEntityById(jobOfferId);
-
-        RecruiterProfile recruiter = recruiterProfileRepository
-                .findById(recruiterProfileId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Profil recruteur introuvable avec l'id : "
-                                + recruiterProfileId));
-
-        if (!jobOffer.getRecruiter().getId().equals(recruiter.getId())) {
-            throw new IllegalArgumentException(
-                    "Ce recruteur ne peut pas supprimer cette offre.");
+        public List<JobOfferResponse> getAllJobOffers() {
+                return jobOfferRepository.findAll()
+                                .stream()
+                                .map(this::toResponse)
+                                .toList();
         }
 
-        jobOfferRepository.delete(jobOffer);
-    }
-
-    private JobOffer getJobOfferEntityById(Long id) {
-        return jobOfferRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Offre introuvable avec l'id : " + id));
-    }
-
-    private JobOfferResponse toResponse(JobOffer jobOffer) {
-        return new JobOfferResponse(
-                jobOffer.getId(),
-                jobOffer.getTitle(),
-                jobOffer.getDescription(),
-                jobOffer.getCompany(),
-                jobOffer.getLocation(),
-                jobOffer.getWorkMode(),
-                jobOffer.getOfferType(),
-                jobOffer.getSalaryMin(),
-                jobOffer.getSalaryMax(),
-                jobOffer.getCreatedAt(),
-                jobOffer.getRecruiter().getId());
-    }
-
-    @Transactional(readOnly = true)
-    public Page<JobOfferResponse> searchJobOffers(
-            String keyword,
-            String location,
-            String workMode,
-            String offerType,
-            int page,
-            int size) {
-        if (page < 0) {
-            throw new IllegalArgumentException(
-                    "Le numéro de page ne peut pas être négatif.");
+        public JobOfferResponse getJobOfferById(Long id) {
+                return toResponse(getJobOfferEntityById(id));
         }
 
-        if (size < 1 || size > 50) {
-            throw new IllegalArgumentException(
-                    "La taille de page doit être comprise entre 1 et 50.");
+        @Transactional
+        public JobOfferResponse createJobOffer(
+                        String email,
+                        JobOffer jobOffer) {
+                RecruiterProfile recruiter = recruiterProfileRepository
+                                .findByUserEmail(email)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Recruteur introuvable."));
+
+                if (recruiter.getUser().getRole() != UserRole.RECRUITER) {
+                        throw new IllegalStateException(
+                                        "Seul un recruteur peut créer une offre.");
+                }
+
+                jobOffer.setId(null);
+                jobOffer.setRecruiter(recruiter);
+
+                return toResponse(jobOfferRepository.save(jobOffer));
         }
 
-        PageRequest pageable = PageRequest.of(
-                page,
-                size,
-                Sort.by(Sort.Direction.DESC, "createdAt"));
+        @Transactional
+        public void deleteJobOffer(
+                        Long jobOfferId,
+                        String email) {
+                JobOffer jobOffer = getJobOfferEntityById(jobOfferId);
 
-        return jobOfferRepository.search(
-                normalize(keyword),
-                normalize(location),
-                normalize(workMode),
-                normalize(offerType),
-                pageable).map(this::toResponse);
-    }
+                RecruiterProfile recruiter = getRecruiterByEmail(email);
+                        
 
-    private String normalize(String value) {
-        return (value == null || value.isBlank()) ? null : value.trim();
-    }
+                if (!jobOffer.getRecruiter().getId().equals(recruiter.getId())) {
+                        throw new IllegalArgumentException(
+                                        "Ce recruteur ne peut pas supprimer cette offre.");
+                }
 
-    @Transactional
-    public JobOfferResponse updateJobOffer(
-            Long jobOfferId,
-            Long recruiterProfileId,
-            UpdateJobOfferRequest request) {
-        JobOffer jobOffer = getJobOfferEntityById(jobOfferId);
-
-        RecruiterProfile recruiter = recruiterProfileRepository
-                .findById(recruiterProfileId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Profil recruteur introuvable avec l'id : "
-                                + recruiterProfileId));
-
-        if (!jobOffer.getRecruiter().getId().equals(recruiter.getId())) {
-            throw new IllegalArgumentException(
-                    "Ce recruteur ne peut pas modifier cette offre.");
+                jobOfferRepository.delete(jobOffer);
         }
 
-        if (request.salaryMax().compareTo(request.salaryMin()) < 0) {
-            throw new IllegalArgumentException(
-                    "Le salaire maximum doit être supérieur ou égal au salaire minimum.");
+        private JobOffer getJobOfferEntityById(Long id) {
+                return jobOfferRepository.findById(id)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Offre introuvable avec l'id : " + id));
         }
 
-        jobOffer.setTitle(request.title());
-        jobOffer.setDescription(request.description());
-        jobOffer.setCompany(request.company());
-        jobOffer.setLocation(request.location());
-        jobOffer.setWorkMode(request.workMode());
-        jobOffer.setOfferType(request.offerType());
-        jobOffer.setSalaryMin(request.salaryMin());
-        jobOffer.setSalaryMax(request.salaryMax());
+        private JobOfferResponse toResponse(JobOffer jobOffer) {
+                return new JobOfferResponse(
+                                jobOffer.getId(),
+                                jobOffer.getTitle(),
+                                jobOffer.getDescription(),
+                                jobOffer.getCompany(),
+                                jobOffer.getLocation(),
+                                jobOffer.getWorkMode(),
+                                jobOffer.getOfferType(),
+                                jobOffer.getSalaryMin(),
+                                jobOffer.getSalaryMax(),
+                                jobOffer.getCreatedAt(),
+                                jobOffer.getRecruiter().getId());
+        }
 
-        return toResponse(jobOfferRepository.save(jobOffer));
-    }
+        @Transactional(readOnly = true)
+        public Page<JobOfferResponse> searchJobOffers(
+                        String keyword,
+                        String location,
+                        String workMode,
+                        String offerType,
+                        int page,
+                        int size) {
+                if (page < 0) {
+                        throw new IllegalArgumentException(
+                                        "Le numéro de page ne peut pas être négatif.");
+                }
+
+                if (size < 1 || size > 50) {
+                        throw new IllegalArgumentException(
+                                        "La taille de page doit être comprise entre 1 et 50.");
+                }
+
+                PageRequest pageable = PageRequest.of(
+                                page,
+                                size,
+                                Sort.by(Sort.Direction.DESC, "createdAt"));
+
+                return jobOfferRepository.search(
+                                normalize(keyword),
+                                normalize(location),
+                                normalize(workMode),
+                                normalize(offerType),
+                                pageable).map(this::toResponse);
+        }
+
+        private String normalize(String value) {
+                return (value == null || value.isBlank()) ? null : value.trim();
+        }
+
+        @Transactional
+        public JobOfferResponse updateJobOffer(
+                        Long jobOfferId,
+                        String email,
+                        UpdateJobOfferRequest request) {
+                JobOffer jobOffer = getJobOfferEntityById(jobOfferId);
+
+                RecruiterProfile recruiter = getRecruiterByEmail(email);
+
+                if (!jobOffer.getRecruiter().getId().equals(recruiter.getId())) {
+                        throw new IllegalArgumentException(
+                                        "Ce recruteur ne peut pas modifier cette offre.");
+                }
+
+                if (request.salaryMax().compareTo(request.salaryMin()) < 0) {
+                        throw new IllegalArgumentException(
+                                        "Le salaire maximum doit être supérieur ou égal au salaire minimum.");
+                }
+
+                jobOffer.setTitle(request.title());
+                jobOffer.setDescription(request.description());
+                jobOffer.setCompany(request.company());
+                jobOffer.setLocation(request.location());
+                jobOffer.setWorkMode(request.workMode());
+                jobOffer.setOfferType(request.offerType());
+                jobOffer.setSalaryMin(request.salaryMin());
+                jobOffer.setSalaryMax(request.salaryMax());
+
+                return toResponse(jobOfferRepository.save(jobOffer));
+
+        }
+
 }

@@ -20,14 +20,10 @@ public class CandidateProfileService {
         private final CandidateProfileRepository candidateProfileRepository;
         private final UserRepository userRepository;
 
-        public CandidateProfileResponse getProfileById(Long id) {
-                return toResponse(getProfileEntityById(id));
-        }
-
-        private CandidateProfile getProfileEntityById(Long id) {
-                return candidateProfileRepository.findById(id)
+        private CandidateProfile getCandidateByEmail(String email) {
+                return candidateProfileRepository.findByUserEmail(email)
                                 .orElseThrow(() -> new ResourceNotFoundException(
-                                                "Profil candidat introuvable avec l'id : " + id));
+                                                "Profil candidat introuvable."));
         }
 
         private CandidateProfileResponse toResponse(
@@ -38,13 +34,24 @@ public class CandidateProfileService {
                                 profile.getPhone(),
                                 profile.getCity());
         }
+
+        public CandidateProfileResponse getCurrentProfile(String email) {
+                CandidateProfile profile = candidateProfileRepository
+                                .findByUserEmail(email)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Profil candidat introuvable."));
+
+                return toResponse(profile);
+        }
+
         @Transactional
         public CandidateProfileResponse createProfile(
+                        String email,
                         CreateCandidateProfileRequest request) {
-                User user = userRepository.findById(request.userId())
+                User user = userRepository.findByEmail(email)
                                 .orElseThrow(() -> new ResourceNotFoundException(
-                                                "Utilisateur introuvable avec l'id : " + request.userId()));
-
+                                                "Utilisateur introuvable."));
+                                                
                 if (user.getRole() != UserRole.CANDIDATE) {
                         throw new IllegalArgumentException(
                                         "Cet utilisateur n'a pas le rôle CANDIDATE.");
@@ -70,16 +77,15 @@ public class CandidateProfileService {
         }
 
         @Transactional
-        public CandidateProfileResponse updateProfile(
-                        Long id,
+        public CandidateProfileResponse updateCurrentProfile(
+                        String email,
                         UpdateCandidateProfileRequest request) {
-                CandidateProfile profile = getProfileEntityById(id);
+                CandidateProfile profile = getCandidateByEmail(email);
 
                 profile.setPhone(request.phone());
                 profile.setCity(request.city());
 
                 return toResponse(candidateProfileRepository.save(profile));
         }
-
 
 }

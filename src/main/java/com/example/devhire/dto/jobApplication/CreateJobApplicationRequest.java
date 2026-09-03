@@ -5,9 +5,6 @@ import jakarta.validation.constraints.Size;
 
 public record CreateJobApplicationRequest(
 
-        @NotNull(message = "L'identifiant du profil candidat est obligatoire.")
-        Long candidateProfileId,
-
         @NotNull(message = "L'identifiant de l'offre est obligatoire.")
         Long jobOfferId,
 

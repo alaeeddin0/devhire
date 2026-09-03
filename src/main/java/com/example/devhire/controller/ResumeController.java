@@ -13,45 +13,48 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.Authentication;
 
 @RestController
-@RequestMapping("/api/candidate-profiles")
+@RequestMapping("/api/resumes")
 @RequiredArgsConstructor
 public class ResumeController {
 
         private final ResumeService resumeService;
 
-        @GetMapping("/{candidateProfileId}/resumes")
-        public ResponseEntity<List<ResumeResponse>> getResumesByCandidate(
-                        @PathVariable Long candidateProfileId) {
+        @GetMapping
+        public ResponseEntity<List<ResumeResponse>> getMyResumes(
+                        Authentication authentication) {
                 return ResponseEntity.ok(
-                                resumeService.getResumesByCandidate(candidateProfileId));
+                                resumeService.getMyResumes(authentication.getName()));
         }
 
-        @GetMapping("/{candidateProfileId}/resumes/{resumeId}")
+        @GetMapping("/{resumeId}")
         public ResponseEntity<ResumeResponse> getResumeById(
-                        @PathVariable Long candidateProfileId,
-                        @PathVariable Long resumeId) {
+                        @PathVariable Long resumeId,
+                        Authentication authentication) {
                 return ResponseEntity.ok(
                                 resumeService.getResumeById(
-                                                candidateProfileId,
+                                                authentication.getName(),
                                                 resumeId));
         }
 
-        @PostMapping(value = "/{candidateProfileId}/resume", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+        @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
         public ResponseEntity<ResumeResponse> uploadResume(
-                        @PathVariable Long candidateProfileId,
+                        Authentication authentication,
                         @RequestParam MultipartFile file) {
                 return ResponseEntity.ok(
-                                resumeService.uploadResume(candidateProfileId, file));
+                                resumeService.uploadResume(
+                                                authentication.getName(),
+                                                file));
         }
 
-        @GetMapping("/{candidateProfileId}/resumes/{resumeId}/download")
+        @GetMapping("/{resumeId}/download")
         public ResponseEntity<Resource> downloadResume(
-                        @PathVariable Long candidateProfileId,
-                        @PathVariable Long resumeId) {
+                        @PathVariable Long resumeId,
+                        Authentication authentication) {
                 ResumeFileDownload file = resumeService.downloadResume(
-                                candidateProfileId,
+                                authentication.getName(),
                                 resumeId);
 
                 return ResponseEntity.ok()
@@ -67,11 +70,13 @@ public class ResumeController {
                                 .body(file.resource());
         }
 
-        @DeleteMapping("/{candidateProfileId}/resumes/{resumeId}")
+        @DeleteMapping("/{resumeId}")
         public ResponseEntity<Void> deleteResume(
-                        @PathVariable Long candidateProfileId,
-                        @PathVariable Long resumeId) {
-                resumeService.deleteResume(candidateProfileId, resumeId);
+                        @PathVariable Long resumeId,
+                        Authentication authentication) {
+                resumeService.deleteResume(
+                                authentication.getName(),
+                                resumeId);
 
                 return ResponseEntity.noContent().build();
         }

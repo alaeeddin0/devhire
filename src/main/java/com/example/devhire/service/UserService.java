@@ -36,6 +36,14 @@ public class UserService {
                         "Utilisateur introuvable avec l'id : " + id));
 
     }
+    
+    public UserResponse getUserByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Utilisateur introuvable."));
+
+        return toUserResponse(user);
+    }
 
     @Transactional
     public UserResponse createUser(CreateUserRequest request) {
@@ -73,14 +81,16 @@ public class UserService {
                 user.isActive()
         );
     }
-
+    
     @Transactional
-    public UserResponse updateUser(
-            Long id,
+    public UserResponse updateCurrentUser(
+            String email,
             UpdateUserRequest request) {
-        User user = getUserEntityById(id);
+        User user = getUserEntityByEmail(email);
 
-        if (userRepository.existsByEmailAndIdNot(request.email(), id)) {
+        if (userRepository.existsByEmailAndIdNot(
+                request.email(),
+                user.getId())) {
             throw new IllegalArgumentException(
                     "Cet email est déjà utilisé par un autre utilisateur.");
         }
@@ -89,7 +99,7 @@ public class UserService {
         user.setLastName(request.lastName());
         user.setEmail(request.email());
 
-        if (request.password() != null) {
+        if (request.password() != null && !request.password().isBlank()) {
             user.setPasswordHash(
                     passwordEncoder.encode(request.password()));
         }
@@ -98,11 +108,18 @@ public class UserService {
     }
     
     @Transactional
-    public UserResponse deactivateUser(Long id) {
-        User user = getUserEntityById(id);
+    public UserResponse deactivateCurrentUser(String email) {
+        User user = getUserEntityByEmail(email);
 
         user.setActive(false);
 
         return toUserResponse(userRepository.save(user));
     }
+    
+    private User getUserEntityByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Utilisateur introuvable."));
+    }
+    
 }

@@ -44,33 +44,41 @@ public class ResumeService {
                 this.jobApplicationRepository = jobApplicationRepository;
         }
 
-        public List<ResumeResponse> getResumesByCandidate(
-                        Long candidateProfileId) {
-                if (!candidateProfileRepository.existsById(candidateProfileId)) {
-                        throw new ResourceNotFoundException(
-                                        "Profil candidat introuvable avec l'id : "
-                                                        + candidateProfileId);
+        private CandidateProfile getCandidateByEmail(String email) {
+                return candidateProfileRepository.findByUserEmail(email)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Profil candidat introuvable."));
+        }
+        
+        private Resume getOwnedResume(
+                        String email,
+                        Long resumeId) {
+                CandidateProfile candidate = getCandidateByEmail(email);
+
+                Resume resume = getResumeEntityById(resumeId);
+
+                if (!resume.getCandidate().getId().equals(candidate.getId())) {
+                        throw new IllegalArgumentException(
+                                        "Ce CV n'appartient pas au candidat connecté.");
                 }
 
+                return resume;
+        }
+        
+        public List<ResumeResponse> getMyResumes(String email) {
+                CandidateProfile candidate = getCandidateByEmail(email);
+
                 return resumeRepository
-                                .findAllByCandidateIdOrderByUploadedAtDesc(
-                                                candidateProfileId)
+                                .findAllByCandidateIdOrderByUploadedAtDesc(candidate.getId())
                                 .stream()
                                 .map(this::toResponse)
                                 .toList();
         }
 
         public ResumeResponse getResumeById(
-                        Long candidateProfileId,
+                        String email,
                         Long resumeId) {
-                Resume resume = getResumeEntityById(resumeId);
-
-                if (!resume.getCandidate().getId().equals(candidateProfileId)) {
-                        throw new IllegalArgumentException(
-                                        "Ce CV n'appartient pas à ce candidat.");
-                }
-
-                return toResponse(resume);
+                return toResponse(getOwnedResume(email, resumeId));
         }
 
         private Resume getResumeEntityById(Long id) {
@@ -81,15 +89,11 @@ public class ResumeService {
 
         @Transactional
         public ResumeResponse uploadResume(
-                        Long candidateProfileId,
+                        String email,
                         MultipartFile file) {
                 validatePdf(file);
 
-                CandidateProfile candidate = candidateProfileRepository
-                                .findById(candidateProfileId)
-                                .orElseThrow(() -> new ResourceNotFoundException(
-                                                "Profil candidat introuvable avec l'id : "
-                                                                + candidateProfileId));
+                CandidateProfile candidate = getCandidateByEmail(email);
 
                 try {
                         Files.createDirectories(resumeDirectory);
@@ -145,14 +149,9 @@ public class ResumeService {
         }
 
         public ResumeFileDownload downloadResume(
-                        Long candidateProfileId,
+                        String email,
                         Long resumeId) {
-                Resume resume = getResumeEntityById(resumeId);
-
-                if (!resume.getCandidate().getId().equals(candidateProfileId)) {
-                        throw new IllegalArgumentException(
-                                        "Ce CV n'appartient pas à ce candidat.");
-                }
+                Resume resume = getOwnedResume(email, resumeId);
 
                 Path filePath = resumeDirectory
                                 .resolve(resume.getStoredFileName())
@@ -184,14 +183,9 @@ public class ResumeService {
         
         @Transactional
         public void deleteResume(
-                        Long candidateProfileId,
+                        String email,
                         Long resumeId) {
-                Resume resume = getResumeEntityById(resumeId);
-
-                if (!resume.getCandidate().getId().equals(candidateProfileId)) {
-                        throw new IllegalArgumentException(
-                                        "Ce CV n'appartient pas à ce candidat.");
-                }
+                Resume resume = getOwnedResume(email, resumeId);
 
                 if (jobApplicationRepository.existsByResumeId(resumeId)) {
                         throw new IllegalArgumentException(
