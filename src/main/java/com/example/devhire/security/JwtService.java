@@ -1,7 +1,8 @@
 package com.example.devhire.security;
 
 import com.example.devhire.config.JwtProperties;
-import com.example.devhire.model.User;
+import com.example.devhire.model.user.User;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;

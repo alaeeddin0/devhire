@@ -1,6 +1,6 @@
 package com.example.devhire.dto.user;
 
-import com.example.devhire.model.UserRole;
+import com.example.devhire.model.user.UserRole;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

@@ -1,7 +1,8 @@
 package com.example.devhire.security;
 
-import com.example.devhire.model.User;
-import com.example.devhire.repo.UserRepository;
+import com.example.devhire.model.user.User;
+import com.example.devhire.repo.user.UserRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

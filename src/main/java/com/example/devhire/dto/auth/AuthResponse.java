@@ -1,6 +1,6 @@
 package com.example.devhire.dto.auth;
 
-import com.example.devhire.model.UserRole;
+import com.example.devhire.model.user.UserRole;
 
 public record AuthResponse(
         String accessToken,

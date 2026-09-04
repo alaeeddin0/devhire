@@ -87,6 +87,7 @@ public class SecurityConfig {
                                                                 HttpMethod.GET,
                                                                 "/api/job-applications/me")
                                                 .hasRole("CANDIDATE")
+                                                .requestMatchers("/api/saved-job-offers/**").hasRole("CANDIDATE")
 
                                                 // Recruiter
                                                 .requestMatchers(
@@ -136,6 +137,10 @@ public class SecurityConfig {
                                                                 HttpMethod.DELETE,
                                                                 "/api/job-applications/**")
                                                 .hasRole("CANDIDATE")
+                                                .requestMatchers(
+                                                                HttpMethod.GET,
+                                                                "/api/job-applications/*/status-history")
+                                                .hasAnyRole("CANDIDATE", "RECRUITER")
 
                                                 .requestMatchers(
                                                                 HttpMethod.GET,
@@ -156,6 +161,26 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/users/**").hasRole("ADMIN")
 
                                                 .requestMatchers("/error").permitAll()
+                                                // interviews
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/interviews/candidate/me")
+                                                .hasRole("CANDIDATE")
+
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/interviews/recruiter/me")
+                                                .hasRole("RECRUITER")
+
+                                                .requestMatchers(HttpMethod.POST,
+                                                                "/api/interviews/**")
+                                                .hasRole("RECRUITER")
+
+                                                .requestMatchers(HttpMethod.PUT,
+                                                                "/api/interviews/**")
+                                                .hasRole("RECRUITER")
+
+                                                .requestMatchers(HttpMethod.PATCH,
+                                                                "/api/interviews/**")
+                                                .hasRole("RECRUITER")
 
                                                 .anyRequest().authenticated())
 

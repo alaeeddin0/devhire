@@ -1,6 +1,6 @@
 package com.example.devhire.dto.jobApplication;
 
-import com.example.devhire.model.ApplicationStatus;
+import com.example.devhire.model.jobApplication.ApplicationStatus;
 import java.time.LocalDateTime;
 
 public record JobApplicationResponse(
