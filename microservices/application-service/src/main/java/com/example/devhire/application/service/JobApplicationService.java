@@ -63,6 +63,19 @@ public class JobApplicationService {
         }
 
         @Transactional(readOnly = true)
+        public JobApplicationInternalResponse getInternalById(
+                        Long applicationId) {
+
+                JobApplication application = getEntity(applicationId);
+
+                return new JobApplicationInternalResponse(
+                                application.getId(),
+                                application.getCandidateUserId(),
+                                application.getJobOfferId(),
+                                application.getStatus());
+        }
+
+        @Transactional(readOnly = true)
         public List<JobApplicationResponse> getReceivedApplications(
                         Long jobOfferId,
                         Long recruiterUserId) {
@@ -148,7 +161,7 @@ public class JobApplicationService {
 
                 return toResponse(savedApplication);
         }
-        
+
         @Transactional(readOnly = true)
         public List<ApplicationStatusHistoryResponse> getStatusHistory(
                         Long applicationId,
@@ -197,6 +210,7 @@ public class JobApplicationService {
                                 history.getChangedByRecruiterUserId(),
                                 history.getChangedAt());
         }
+
         private JobApplication getEntity(Long applicationId) {
                 return jobApplicationRepository.findById(applicationId)
                                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -235,7 +249,7 @@ public class JobApplicationService {
         private String normalize(String value) {
                 return value == null || value.isBlank() ? null : value.trim();
         }
-        
+
         private Resume getOwnedResume(
                         Long candidateUserId,
                         Long resumeId) {

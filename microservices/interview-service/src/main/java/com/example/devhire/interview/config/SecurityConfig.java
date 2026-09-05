@@ -1,6 +1,6 @@
-package com.example.devhire.application.config;
+package com.example.devhire.interview.config;
 
-import com.example.devhire.application.security.JwtAuthenticationFilter;
+import com.example.devhire.interview.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,7 +11,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import com.example.devhire.application.security.InternalApiKeyFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -19,7 +18,6 @@ import com.example.devhire.application.security.InternalApiKeyFilter;
 public class SecurityConfig {
 
         private final JwtAuthenticationFilter jwtAuthenticationFilter;
-        private final InternalApiKeyFilter internalApiKeyFilter;
 
         @Bean
         public SecurityFilterChain securityFilterChain(
@@ -30,61 +28,42 @@ public class SecurityConfig {
 
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
                                 .addFilterBefore(
                                                 jwtAuthenticationFilter,
-                                                UsernamePasswordAuthenticationFilter.class)
-                                .addFilterBefore(
-                                                internalApiKeyFilter,
                                                 UsernamePasswordAuthenticationFilter.class)
 
                                 .authorizeHttpRequests(authorize -> authorize
                                                 .requestMatchers(
+                                                                HttpMethod.GET,
+                                                                "/api/interviews/candidate/me")
+                                                .hasRole("CANDIDATE")
+
+                                                .requestMatchers(
+                                                                HttpMethod.GET,
+                                                                "/api/interviews/recruiter/me")
+                                                .hasRole("RECRUITER")
+
+                                                .requestMatchers(
                                                                 HttpMethod.POST,
-                                                                "/api/job-applications")
-                                                .hasRole("CANDIDATE")
-
-                                                .requestMatchers(
-                                                                HttpMethod.GET,
-                                                                "/api/job-applications/*/status-history")
-                                                .hasAnyRole("CANDIDATE", "RECRUITER")
-
-                                                .requestMatchers(
-                                                                HttpMethod.GET,
-                                                                "/api/job-applications/me")
-                                                .hasRole("CANDIDATE")
+                                                                "/api/interviews/**")
+                                                .hasRole("RECRUITER")
 
                                                 .requestMatchers(
                                                                 HttpMethod.PUT,
-                                                                "/api/job-applications/*")
-                                                .hasRole("CANDIDATE")
-
-                                                .requestMatchers(
-                                                                HttpMethod.DELETE,
-                                                                "/api/job-applications/*")
-                                                .hasRole("CANDIDATE")
-
-                                                .requestMatchers(
-                                                                HttpMethod.GET,
-                                                                "/api/job-applications/job-offer/*")
+                                                                "/api/interviews/**")
                                                 .hasRole("RECRUITER")
 
                                                 .requestMatchers(
                                                                 HttpMethod.PATCH,
-                                                                "/api/job-applications/*/status")
+                                                                "/api/interviews/**")
                                                 .hasRole("RECRUITER")
-                                                
-                                                .requestMatchers(
-                                                                HttpMethod.GET,
-                                                                "/api/job-applications/internal/*")
-                                                .hasRole("INTERNAL_SERVICE")
-
-                                                .requestMatchers("/api/resumes/**")
-                                                .hasRole("CANDIDATE")
 
                                                 .requestMatchers("/actuator/health", "/error")
                                                 .permitAll()
 
-                                                .anyRequest().authenticated())
+                                                .anyRequest()
+                                                .authenticated())
 
                                 .httpBasic(httpBasic -> httpBasic.disable())
                                 .formLogin(formLogin -> formLogin.disable())

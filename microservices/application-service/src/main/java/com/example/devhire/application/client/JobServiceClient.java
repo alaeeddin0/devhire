@@ -1,30 +1,25 @@
 package com.example.devhire.application.client;
 
 import com.example.devhire.application.exception.ResourceNotFoundException;
-import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.RestClientResponseException;
 
 @Component
 public class JobServiceClient {
 
-    private final RestClient restClient;
+    private final RestTemplate restTemplate;
 
-    public JobServiceClient(
-            @LoadBalanced RestClient.Builder restClientBuilder) {
-
-        this.restClient = restClientBuilder
-                .baseUrl("http://JOB-SERVICE")
-                .build();
+    public JobServiceClient(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
     }
 
     public JobOfferRemoteResponse getOffer(Long jobOfferId) {
         try {
-            return restClient.get()
-                    .uri("/api/job-offers/{id}", jobOfferId)
-                    .retrieve()
-                    .body(JobOfferRemoteResponse.class);
+            return restTemplate.getForObject(
+                    "http://JOB-SERVICE/api/job-offers/{id}",
+                    JobOfferRemoteResponse.class,
+                    jobOfferId);
 
         } catch (RestClientResponseException exception) {
             if (exception.getStatusCode().value() == 404) {

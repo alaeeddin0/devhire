@@ -38,6 +38,14 @@ public class JobApplicationController {
                                 jobApplicationService.getMyApplications(
                                                 currentUser(authentication).id()));
         }
+        
+        @GetMapping("/internal/{applicationId}")
+        public ResponseEntity<JobApplicationInternalResponse> getInternalById(
+                        @PathVariable Long applicationId) {
+
+                return ResponseEntity.ok(
+                                jobApplicationService.getInternalById(applicationId));
+        }
 
         @GetMapping("/job-offer/{jobOfferId}")
         public ResponseEntity<List<JobApplicationResponse>> getReceivedApplications(
